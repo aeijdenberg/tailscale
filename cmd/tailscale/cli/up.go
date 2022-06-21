@@ -362,7 +362,7 @@ func prefsFromUpArgs(upArgs upArgsT, warnf logger.Logf, st *ipnstate.Status, goo
 // without changing any settings.
 func updatePrefs(prefs, curPrefs *ipn.Prefs, env upCheckEnv) (simpleUp bool, justEditMP *ipn.MaskedPrefs, err error) {
 	if !env.upArgs.reset {
-		applyImplicitPrefs(prefs, curPrefs, env.user)
+		applyImplicitPrefs(prefs, curPrefs, env)
 
 		if err := checkForAccidentalSettingReverts(prefs, curPrefs, env); err != nil {
 			return false, nil, err
@@ -886,8 +886,14 @@ func checkForAccidentalSettingReverts(newPrefs, curPrefs *ipn.Prefs, env upCheck
 // match the current user.
 //
 // curUser is os.Getenv("USER"). It's pulled out for testability.
-func applyImplicitPrefs(prefs, oldPrefs *ipn.Prefs, curUser string) {
-	if prefs.OperatorUser == "" && oldPrefs.OperatorUser == curUser {
+func applyImplicitPrefs(prefs, oldPrefs *ipn.Prefs, env upCheckEnv) {
+	newFlags := prefsToFlags(env, prefs)
+	userFromFlag, ok := newFlags["operator"]
+	if ok && userFromFlag == "" {
+		return
+	}
+
+	if prefs.OperatorUser == "" && oldPrefs.OperatorUser == env.user {
 		prefs.OperatorUser = oldPrefs.OperatorUser
 	}
 }

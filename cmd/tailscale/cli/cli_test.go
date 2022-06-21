@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -489,18 +490,20 @@ func TestCheckForAccidentalSettingReverts(t *testing.T) {
 			flagSet := newUpFlagSet(goos, &upArgs)
 			flags := CleanUpArgs(tt.flags)
 			flagSet.Parse(flags)
-			newPrefs, err := prefsFromUpArgs(upArgs, t.Logf, new(ipnstate.Status), goos)
-			if err != nil {
-				t.Fatal(err)
-			}
-			applyImplicitPrefs(newPrefs, tt.curPrefs, tt.curUser)
-			var got string
-			if err := checkForAccidentalSettingReverts(newPrefs, tt.curPrefs, upCheckEnv{
+			env := upCheckEnv{
 				goos:          goos,
 				flagSet:       flagSet,
 				curExitNodeIP: tt.curExitNodeIP,
 				distro:        tt.distro,
-			}); err != nil {
+				user:          tt.curUser,
+			}
+			newPrefs, err := prefsFromUpArgs(upArgs, t.Logf, new(ipnstate.Status), goos)
+			if err != nil {
+				t.Fatal(err)
+			}
+			applyImplicitPrefs(newPrefs, tt.curPrefs, env)
+			var got string
+			if err := checkForAccidentalSettingReverts(newPrefs, tt.curPrefs, env); err != nil {
 				got = err.Error()
 			}
 			if strings.TrimSpace(got) != tt.want {
@@ -845,6 +848,26 @@ func TestUpdatePrefs(t *testing.T) {
 				RunSSHSet:                 true,
 				ShieldsUpSet:              true,
 				WantRunningSet:            true,
+			},
+		},
+		{
+			name:  "operator_user_force_blank",
+			flags: []string{"--operator="},
+			curPrefs: &ipn.Prefs{
+				ControlURL:       ipn.DefaultControlURL,
+				Persist:          &persist.Persist{LoginName: "crawshaw.github"},
+				OperatorUser:     os.Getenv("USER"),
+				AllowSingleHosts: true,
+				CorpDNS:          true,
+				NetfilterMode:    preftype.NetfilterOn,
+			},
+			env: upCheckEnv{
+				backendState: "Running",
+				user:         os.Getenv("USER"),
+			},
+			wantJustEditMP: &ipn.MaskedPrefs{
+				WantRunningSet:  true,
+				OperatorUserSet: true,
 			},
 		},
 		{
