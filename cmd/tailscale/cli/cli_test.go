@@ -490,16 +490,16 @@ func TestCheckForAccidentalSettingReverts(t *testing.T) {
 			flagSet := newUpFlagSet(goos, &upArgs)
 			flags := CleanUpArgs(tt.flags)
 			flagSet.Parse(flags)
+			newPrefs, err := prefsFromUpArgs(upArgs, t.Logf, new(ipnstate.Status), goos)
+			if err != nil {
+				t.Fatal(err)
+			}
 			env := upCheckEnv{
 				goos:          goos,
 				flagSet:       flagSet,
 				curExitNodeIP: tt.curExitNodeIP,
 				distro:        tt.distro,
 				user:          tt.curUser,
-			}
-			newPrefs, err := prefsFromUpArgs(upArgs, t.Logf, new(ipnstate.Status), goos)
-			if err != nil {
-				t.Fatal(err)
 			}
 			applyImplicitPrefs(newPrefs, tt.curPrefs, env)
 			var got string
