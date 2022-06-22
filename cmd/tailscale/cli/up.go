@@ -885,18 +885,14 @@ func checkForAccidentalSettingReverts(newPrefs, curPrefs *ipn.Prefs, env upCheck
 // If the operator flag is passed no action is taken, otherwise this only needs to be set if it doesn't
 // match the current user.
 func applyImplicitPrefs(prefs, oldPrefs *ipn.Prefs, env upCheckEnv) {
-	explicitlySet := false
-	upFlagSet.Visit(func(f *flag.Flag) {
+	explicitOperator := false
+	env.flagSet.Visit(func(f *flag.Flag) {
 		if f.Name == "operator" {
-			explicitlySet = true
+			explicitOperator = true
 		}
 	})
 
-	if explicitlySet && prefs.OperatorUser == "" {
-		return
-	}
-
-	if prefs.OperatorUser == "" && oldPrefs.OperatorUser == env.user {
+	if prefs.OperatorUser == "" && oldPrefs.OperatorUser == env.user && !explicitOperator {
 		prefs.OperatorUser = oldPrefs.OperatorUser
 	}
 }
