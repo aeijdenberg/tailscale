@@ -884,8 +884,6 @@ func checkForAccidentalSettingReverts(newPrefs, curPrefs *ipn.Prefs, env upCheck
 // applyImplicitPrefs mutates prefs to add implicit preferences for the user operator.
 // If the operator flag is passed no action is taken, otherwise this only needs to be set if it doesn't
 // match the current user.
-//
-// curUser is os.Getenv("USER"). It's pulled out for testability.
 func applyImplicitPrefs(prefs, oldPrefs *ipn.Prefs, env upCheckEnv) {
 	explicitlySet := false
 	upFlagSet.Visit(func(f *flag.Flag) {
