@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -787,9 +786,12 @@ func TestUpdatePrefs(t *testing.T) {
 		curPrefs *ipn.Prefs
 		env      upCheckEnv // empty goos means "linux"
 
-		wantSimpleUp   bool
-		wantJustEditMP *ipn.MaskedPrefs
-		wantErrSubtr   string
+		// checkUpdatePrefsMutations, if non-nil, is run with the new prefs after
+		// updatePrefs might've mutated them (from applyImplicitPrefs).
+		checkUpdatePrefsMutations func(t *testing.T, newPrefs *ipn.Prefs)
+		wantSimpleUp              bool
+		wantJustEditMP            *ipn.MaskedPrefs
+		wantErrSubtr              string
 	}{
 		{
 			name:  "bare_up_means_up",
@@ -851,23 +853,25 @@ func TestUpdatePrefs(t *testing.T) {
 			},
 		},
 		{
-			name:  "operator_user_force_blank",
+			// Issue 3808: explicitly empty --operator= should clear value.
+			name:  "explicit_empty_operator",
 			flags: []string{"--operator="},
 			curPrefs: &ipn.Prefs{
-				ControlURL:       ipn.DefaultControlURL,
-				Persist:          &persist.Persist{LoginName: "crawshaw.github"},
-				OperatorUser:     os.Getenv("USER"),
-				AllowSingleHosts: true,
+				ControlURL:       "https://login.tailscale.com",
 				CorpDNS:          true,
+				AllowSingleHosts: true,
 				NetfilterMode:    preftype.NetfilterOn,
+				OperatorUser:     "somebody",
 			},
-			env: upCheckEnv{
-				backendState: "Running",
-				user:         os.Getenv("USER"),
-			},
+			env: upCheckEnv{user: "somebody", backendState: "Running"},
 			wantJustEditMP: &ipn.MaskedPrefs{
-				WantRunningSet:  true,
 				OperatorUserSet: true,
+				WantRunningSet:  true,
+			},
+			checkUpdatePrefsMutations: func(t *testing.T, prefs *ipn.Prefs) {
+				if prefs.OperatorUser != "" {
+					t.Errorf("operator sent to backend should be empty; got %q", prefs.OperatorUser)
+				}
 			},
 		},
 		{
