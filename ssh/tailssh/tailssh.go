@@ -29,6 +29,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	gossh "github.com/tailscale/golang-x-crypto/ssh"
@@ -792,6 +793,9 @@ func (ss *sshSession) killProcessOnContextDone() {
 			}
 		}
 		ss.logf("terminating SSH session from %v: %v", ss.conn.info.src.IP(), err)
+		ss.cmd.Process.Signal(syscall.SIGHUP) // SSH normally sends a SIGHIP on disconnect
+		time.Sleep(time.Second)               // TODO - is this a reasonable amount of time? I have no idea
+
 		// We don't need to Process.Wait here, sshSession.run() does
 		// the waiting regardless of termination reason.
 		ss.cmd.Process.Kill()
